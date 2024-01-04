@@ -30,6 +30,8 @@ class ScriptReaderLinks:
         page = requests.get(homepage)
         soup = BeautifulSoup(page.content, "html5lib")
 
+        self.name = soup.find("nav", attrs={"id": "navbar"}).find_next_sibling("div").h1.text
+
         self.ExecutiveSummary = homepage+"#exec"
         self.Overview = homepage+"#overview"
         self.Critique = homepage+"#critique"
@@ -383,17 +385,17 @@ class InDepthAnalysis:
                     self.Characters[row.findChildren()[0].text][2] = row.findChildren()[2].text
                     self.Characters[row.findChildren()[0].text][3] = row.findChildren()[3].text
     def parseSceneAnalysis(self):
-        page = requests.get(self.links.Characters)
+        page = requests.get(self.links.Scenes)
         soup = BeautifulSoup(page.content, "html5lib")
-        if soup.find("button", attrs={"id": "In Depth Analysis-tab"}).find_next_sibling("ul").find("a", attrs={"href": "#cont"}):
-            section = soup.find("div", attrs={"id": "cont"}).findChildren("div", class_="container-fluid")
-            for scene in section:
-                sceneName = scene.find("h5").text
-
-                data = ["", [], [], [], [], []] #Summary, Strengths, Weaknesses, Rating, Critique, Suggestions
-                data[0] = scene.find("fieldset", class_="summary-fieldset").contents[2].text.replace("\n", "").strip()
-                data[1] = [i.contents[0].text.replace("\n", "").strip() for i in scene.find("fieldset", class_="strengths-fieldset").findAll("li")]
-                data[2] = [i.contents[0].text.replace("\n", "").strip() for i in scene.find("fieldset", class_="weaknesses-fieldset").findAll("li")]
+        if soup.find("button", attrs={"id": "In Depth Analysis-tab"}).find_next_sibling("ul").find("a", attrs={"href": "#scene"}):
+            counter = 1
+            while soup.find("div", attrs={"id": "scenemodals"+str(counter)}):
+                scene = soup.find("div", attrs={"id": "scenemodals"+str(counter)})
+                sceneName = self.Scenes[counter-1][0]
+                data = ["", [], [], [], [], []]  # Summary, Strengths, Weaknesses, Rating, Critique, Suggestions
+                data[0] = scene.find("fieldset", attrs={"id":"scenemodal"+str(counter)+"summary"}).text.replace("\n", "").strip()
+                data[1] = [i.contents[0].text.replace("\n", "").strip() for i in scene.find("fieldset", attrs={"id": "scenemodal"+str(counter)+"strengths"}).findAll("li")]
+                data[2] = [i.contents[0].text.replace("\n", "").strip() for i in scene.find("fieldset", attrs={"id": "scenemodal"+str(counter)+"weaknesses"}).findAll("li")]
 
                 ratings = scene.findAll("fieldset", class_="summary-fieldset")[1:]
                 for rating in ratings:
@@ -401,10 +403,12 @@ class InDepthAnalysis:
                         data[3].append(row.findAll("p")[0].text.split(":") + [row.findAll("p")[1].text])
                         data[3][-1][1] = data[3][-1][1].strip()
 
-                data[4] = [i.contents[0].text.replace("\n", "").strip() for i in scene.find("fieldset", class_="critique-fieldset").findAll("li")]
-                data[5] = [i.contents[0].text.replace("\n", "").strip() for i in scene.find("fieldset", class_="suggestions-fieldset").findAll("li")]
+                data[4] = [i.contents[0].text.replace("\n", "").strip() for i in scene.find("fieldset", attrs={"id": "scenemodal"+str(counter)+"critique"}).findAll("li")]
+                data[5] = [i.contents[0].text.replace("\n", "").strip() for i in scene.find("fieldset", attrs={"id": "scenemodal"+str(counter)+"suggestions"}).findAll("li")]
+                counter += 1
 
                 self.SceneAnalysis[sceneName] = data
+
     def parseWriterCraft(self):
         page = requests.get(self.links.WriterCraft)
         soup = BeautifulSoup(page.content, "html5lib")
@@ -620,7 +624,8 @@ URLS = {
     "Flyers": "https://scriptreader.ai/disp.php?movieid=bc10b57514d76124b4120a34db2224067fed660b09408ade0b14b582946ff2fc",
     "CAMP": "https://scriptreader.ai/disp.php?movieid=b192c9bbefcbd7b0c7bf0d22de062086cc167f80d5287c2351a5748ad3a085fd",
     "ISOCZ": "https://scriptreader.ai/disp.php?movieid=d2d8f9273e06e9e9c574d1681d0c664bb92716dc71883c051256b2cda975e757",
-    "Starlore": "https://scriptreader.ai/disp.php?movieid=fb87e6cf60af08595bd9fcf1f006a12f1338cb4480acea383b3b65da10bb9f28"
+    "Starlore": "https://scriptreader.ai/disp.php?movieid=fb87e6cf60af08595bd9fcf1f006a12f1338cb4480acea383b3b65da10bb9f28",
+    "Faith and Fury": "https://scriptreader.ai/disp.php?movieid=7ca2552ffd0e38deee9b22af6d3e8ce9fe88ec88162469b02602ff64cc41d2a6"
 }
 def testSpecific(link):
     allLinks = ScriptReaderLinks(URLS[link])
@@ -657,14 +662,15 @@ def testAll():
         except Exception as e:
             print("Error on "+link+": "+str(e))
 
+testAll()
 
-while(True):
+'''while(True):
     try:
         URL = input("Input the URL of the ScriptReader.ai analysis: ")
         print("Validating URL...")
         allLinks = ScriptReaderLinks(URL)
         print("URL Validated!")
-        fileName = input("Output Name: ")
+        fileName = allLinks.name
         break
     except:
         print("Invalid URL")
@@ -684,4 +690,4 @@ ci = ContextualInsights(allLinks)
 ci.parseAll()
 ci.outputAll(fileName)
 
-print("Finished!")
+print("Finished!")'''
